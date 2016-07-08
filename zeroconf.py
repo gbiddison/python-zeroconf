@@ -86,6 +86,8 @@ _DNS_TTL = 60 * 60  # one hour default TTL
 _MAX_MSG_TYPICAL = 1460  # unused
 _MAX_MSG_ABSOLUTE = 8972
 
+_MAX_DNS_OUTGOING = 100  # maximum number of outgoing responses to aggregate from browser, roughly determined on OSX which appears to be the limited OS
+
 _FLAGS_QR_MASK = 0x8000  # query response mask
 _FLAGS_QR_QUERY = 0x0000  # query
 _FLAGS_QR_RESPONSE = 0x8000  # response
@@ -1052,22 +1054,25 @@ class ServiceBrowser(threading.Thread):
             now = current_time_millis()
 
             if self.next_time <= now:
-                # TODO -- limit number of records to N
-                MAX_RECORD_RESPONSES=20
-                count = 0
                 out = DNSOutgoing(_FLAGS_QR_QUERY)
                 out.add_question(DNSQuestion(self.type, _TYPE_PTR, _CLASS_IN))
+
+                # threshold for aggregating
+                total_outgoing_records = 0
                 for record in self.services.values():
                     if not record.is_expired(now):
+                        # if we've flushed the response, we need to generate a new one
                         if out is None:
                             out = DNSOutgoing(_FLAGS_QR_QUERY)
                             out.add_question(DNSQuestion(self.type, _TYPE_PTR, _CLASS_IN))
                         out.add_answer_at_time(record, now)
-                        count += 1
-                        if count >= MAX_RECORD_RESPONSES:
+                        total_outgoing_records += 1
+                        # flush the response if the aggregate size is over threshold
+                        if total_outgoing_records >= _MAX_DNS_OUTGOING:
                             self.zc.send(out)
                             out = None
-                            count = 0
+                            total_outgoing_records = 0
+                # make sure to send response if we never reached threshold
                 if out is not None:
                     self.zc.send(out)
                 self.next_time = now + self.delay
