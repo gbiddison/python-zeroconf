@@ -1052,12 +1052,24 @@ class ServiceBrowser(threading.Thread):
             now = current_time_millis()
 
             if self.next_time <= now:
+                # TODO -- limit number of records to N
+                MAX_RECORD_RESPONSES=20
+                count = 0
                 out = DNSOutgoing(_FLAGS_QR_QUERY)
                 out.add_question(DNSQuestion(self.type, _TYPE_PTR, _CLASS_IN))
                 for record in self.services.values():
                     if not record.is_expired(now):
+                        if out is None:
+                            out = DNSOutgoing(_FLAGS_QR_QUERY)
+                            out.add_question(DNSQuestion(self.type, _TYPE_PTR, _CLASS_IN))
                         out.add_answer_at_time(record, now)
-                self.zc.send(out)
+                        count += 1
+                        if count >= MAX_RECORD_RESPONSES:
+                            self.zc.send(out)
+                            out = None
+                            count = 0
+                if out is not None:
+                    self.zc.send(out)
                 self.next_time = now + self.delay
                 self.delay = min(20 * 1000, self.delay * 2)
 
