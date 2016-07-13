@@ -568,7 +568,7 @@ class DNSIncoming(object):
             self.read_header()
             self.read_questions()
             self.read_others()
-        except struct.error:
+        except:
             pass
 
     def unpack(self, format_):
