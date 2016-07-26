@@ -1119,12 +1119,6 @@ class Engine(threading.Thread):
                                     reader.handle_read(socket_)
                                 except Exception as e:
                                     log.exception('Unknown error, possibly benign: %r', e)
-
-                except socket.error as e:
-                    # If the socket was closed by another thread, during
-                    # shutdown, ignore it and exit
-                    if e.errno != socket.EBADF or not self.zc.done:
-                        raise
                 except Exception as e:
                     log.exception('Unknown error, possibly benign: %r', e)
 
