@@ -1597,7 +1597,9 @@ def get_all_addresses(address_family):
         addr['addr']
         for iface in netifaces.interfaces()
         for addr in netifaces.ifaddresses(iface).get(address_family, [])
-        if addr.get('netmask') != HOST_ONLY_NETWORK_MASK
+        # windows compatibility --> https://github.com/jstasiak/python-zeroconf/issues/84
+        # testing on my osx, commenting this out has no effect on the returned list of addresses
+        # if addr.get('netmask') != HOST_ONLY_NETWORK_MASK
     ))
 
 
